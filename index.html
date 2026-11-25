@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#EFE9DE">
+<title>日记本</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    background:#EFE9DE;color:#2B2723;
+    font-family:ui-serif,"Songti SC","Noto Serif SC",Georgia,serif;
+    display:flex;align-items:center;justify-content:center;
+    padding:10px;
+  }
+  .frame{
+    width:100%;max-width:560px;height:100%;max-height:940px;
+    display:flex;flex-direction:column;
+    background:#FBF8F2;border-radius:14px;overflow:hidden;
+    box-shadow:0 1px 2px rgba(43,39,35,.05),0 14px 34px rgba(43,39,35,.09);
+  }
+  header{display:flex;align-items:center;gap:6px;padding:13px 14px 8px}
+  .nav{
+    width:36px;height:36px;flex:none;border:none;background:transparent;
+    color:#9A9086;font-size:22px;line-height:1;border-radius:9px;cursor:pointer;
+    font-family:inherit;
+  }
+  .nav:active{background:#F2ECE1}
+  .nav[disabled]{opacity:.25;cursor:default}
+  .datebox{flex:1;min-width:0;text-align:center}
+  .date{font-size:15px;letter-spacing:.05em;color:#4E473E}
+  .weekday{font-size:11px;color:#A79C8E;letter-spacing:.16em;margin-top:3px}
+
+  .moods{display:flex;gap:4px;justify-content:center;padding:2px 14px 8px}
+  .moods button{
+    border:1px solid transparent;background:transparent;font-size:16px;
+    padding:5px 7px;border-radius:9px;cursor:pointer;opacity:.35;font-family:inherit;
+  }
+  .moods button.on{opacity:1;border-color:#E7DCCA;background:#FFFDF8}
+
+  .sheet{
+    position:relative;flex:1;min-height:0;margin:2px 10px 0;
+    border-radius:10px;border:1px solid #F0E8DC;overflow:hidden;
+    background:
+      repeating-linear-gradient(to bottom,transparent 0 31px,rgba(43,39,35,.05) 31px 32px),
+      #FFFDF8;
+  }
+  #text{
+    position:absolute;inset:0;width:100%;height:100%;
+    border:none;outline:none;resize:none;background:transparent;
+    padding:0 16px 20px;
+    font-family:inherit;font-size:16px;line-height:32px;color:#2B2723;
+  }
+  #text::placeholder{color:#C2B7A6}
+  #ink{
+    position:absolute;inset:0;width:100%;height:100%;
+    pointer-events:none;touch-action:none;
+  }
+  #ink.drawing{pointer-events:auto;cursor:crosshair}
+  #stickers{position:absolute;inset:0;pointer-events:none}
+  .sticker{
+    position:absolute;transform:translate(-50%,-50%);
+    font-size:27px;line-height:1;pointer-events:none;user-select:none;
+    touch-action:none;filter:drop-shadow(0 1px 1px rgba(43,39,35,.13));
+  }
+  body[data-mode="sticker"] .sticker{pointer-events:auto;cursor:grab}
+
+  footer{border-top:1px solid #EDE6DA}
+  .tabs{display:flex;padding:8px 10px 0;gap:4px}
+  .tabs button{
+    flex:1;border:none;background:transparent;color:#8C8175;font-family:inherit;
+    font-size:14px;padding:9px 0;border-radius:8px;cursor:pointer;letter-spacing:.1em;
+  }
+  .tabs button.on{color:#2B2723;background:#F2ECE1}
+
+  .panel{display:none;padding:10px 14px 14px;gap:9px;align-items:center;flex-wrap:wrap}
+  .panel.on{display:flex}
+  .palette{display:flex;gap:9px;flex:1;justify-content:center}
+  .swatch{
+    width:23px;height:23px;border-radius:50%;flex:none;cursor:pointer;
+    border:1px solid rgba(43,39,35,.13);
+  }
+  .swatch.on{box-shadow:0 0 0 2px #FBF8F2,0 0 0 3.5px #A8563B}
+  .size{
+    border:1px solid #E7DCCA;background:#FFFDF8;border-radius:8px;
+    font-family:inherit;font-size:12px;padding:5px 9px;color:#6E665C;cursor:pointer;
+  }
+  .size.on{background:#2B2723;border-color:#2B2723;color:#FFFDF8}
+  .ghost{
+    margin-left:auto;border:none;background:transparent;color:#AB9F90;
+    font-family:inherit;font-size:12px;cursor:pointer;padding:6px 2px;
+  }
+  .picks{display:flex;flex-wrap:wrap;gap:7px;flex:1;justify-content:center}
+  .picks button{
+    width:38px;height:38px;border-radius:10px;cursor:pointer;line-height:1;
+    border:1px solid #F0E8DC;background:#FFFDF8;font-size:19px;
+  }
+  .picks button:active{background:#F2ECE1}
+</style>
+</head>
+<body data-mode="write">
+<div class="frame">
+  <header>
+    <button class="nav" id="prev" aria-label="前一天">‹</button>
+    <div class="datebox">
+      <div class="date" id="date">—</div>
+      <div class="weekday" id="weekday"></div>
+    </div>
+    <button class="nav" id="next" aria-label="后一天">›</button>
+  </header>
+
+  <div class="moods" id="moods">
+    <button data-m="☀">☀</button>
+    <button data-m="☁">☁</button>
+    <button data-m="🌧">🌧</button>
+    <button data-m="🌙">🌙</button>
+    <button data-m="🔥">🔥</button>
+  </div>
+
+  <div class="sheet" id="sheet">
+    <textarea id="text" placeholder="今天……"></textarea>
+    <canvas id="ink"></canvas>
+    <div id="stickers"></div>
+  </div>
+
+  <footer>
+    <div class="tabs">
+      <button data-mode="write" class="on">写</button>
+      <button data-mode="draw">画</button>
+      <button data-mode="sticker">贴纸</button>
+    </div>
+    <div class="panel" id="penPanel">
+      <div class="palette" id="palette">
+        <div class="swatch on" data-c="#2B2723" style="background:#2B2723"></div>
+        <div class="swatch" data-c="#A8563B" style="background:#A8563B"></div>
+        <div class="swatch" data-c="#4A6B5A" style="background:#4A6B5A"></div>
+        <div class="swatch" data-c="#3F5C8A" style="background:#3F5C8A"></div>
+        <div class="swatch" data-c="#8A6A3F" style="background:#8A6A3F"></div>
+      </div>
+      <button class="size" data-w="2">细</button>
+      <button class="size on" data-w="4">中</button>
+      <button class="size" data-w="8">粗</button>
+      <button class="ghost" id="clearInk">擦掉</button>
+    </div>
+    <div class="panel" id="stickerPanel">
+      <div class="picks" id="picks">
+        <button>🌿</button><button>🌸</button><button>🍂</button><button>✧</button>
+        <button>☾</button><button>★</button><button>🐦</button><button>🐈</button>
+        <button>🍄</button><button>☕</button><button>🕯</button><button>🖤</button>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var KEY='fox_diary_v3';
+  var store={pages:{}};
+  try{var raw=localStorage.getItem(KEY); if(raw) store=JSON.parse(raw)||{pages:{}};}catch(e){}
+  if(!store.pages) store.pages={};
+
+  var $=function(s){return document.querySelector(s);};
+  var sheet=$('#sheet'), text=$('#text'), canvas=$('#ink'), layer=$('#stickers');
+  var ctx=canvas.getContext('2d');
+  var dateEl=$('#date'), weekEl=$('#weekday'), nextBtn=$('#next'), prevBtn=$('#prev');
+
+  var WK=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+  function iso(d){var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+  var today=iso(new Date());
+  var cur=today;
+  var mode='write', color='#2B2723', penW=4;
+
+  function page(d){ if(!store.pages[d]) store.pages[d]={text:'',mood:'',ink:'',stickers:[]}; var p=store.pages[d]; if(!p.stickers) p.stickers=[]; return p; }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+
+  function fitCanvas(){
+    var r=sheet.getBoundingClientRect();
+    if(r.width<10||r.height<10) return;
+    var dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.round(r.width*dpr);
+    canvas.height=Math.round(r.height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    var p=page(cur);
+    ctx.clearRect(0,0,r.width,r.height);
+    if(p.ink){
+      var img=new Image();
+      img.onload=function(){ ctx.clearRect(0,0,r.width,r.height); ctx.drawImage(img,0,0,r.width,r.height); };
+      img.src=p.ink;
+    }
+  }
+
+  function renderDate(){
+    var d=new Date(cur+'T00:00:00');
+    dateEl.textContent=(d.getMonth()+1)+'月'+d.getDate()+'日';
+    weekEl.textContent=WK[d.getDay()];
+    nextBtn.disabled = cur>=today;
+  }
+
+  function renderMood(){
+    var p=page(cur);
+    var bs=document.querySelectorAll('#moods button');
+    for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i].dataset.m===p.mood);
+  }
+
+  function renderStickers(){
+    layer.innerHTML='';
+    var list=page(cur).stickers;
+    for(var i=0;i<list.length;i++){
+      var el=document.createElement('span');
+      el.className='sticker';
+      el.textContent=list[i].c;
+      el.style.left=list[i].x+'%';
+      el.style.top=list[i].y+'%';
+      layer.appendChild(el);
+      dragify(el,list[i]);
+    }
+  }
+
+  function dragify(el,s){
+    var active=false, moved=false, timer=null, startX=0, startY=0;
+    function cancel(){ if(timer){clearTimeout(timer); timer=null;} }
+    el.addEventListener('pointerdown',function(e){
+      if(mode!=='sticker') return;
+      active=true; moved=false;
+      startX=e.clientX; startY=e.clientY;
+      try{ el.setPointerCapture(e.pointerId); }catch(err){}
+      timer=setTimeout(function(){
+        if(!moved){
+          var p=page(cur); var idx=p.stickers.indexOf(s);
+          if(idx>-1){ p.stickers.splice(idx,1); save(); renderStickers(); }
+        }
+        timer=null;
+      },650);
+    });
+    el.addEventListener('pointermove',function(e){
+      if(!active) return;
+      if(!moved && (Math.abs(e.clientX-startX)>6 || Math.abs(e.clientY-startY)>6)){ moved=true; cancel(); }
+      if(!moved) return;
+      var r=layer.getBoundingClientRect();
+      s.x=Math.max(3,Math.min(97,(e.clientX-r.left)/r.width*100));
+      s.y=Math.max(3,Math.min(97,(e.clientY-r.top)/r.height*100));
+      el.style.left=s.x+'%';
+      el.style.top=s.y+'%';
+    });
+    function end(){ if(!active) return; active=false; cancel(); save(); }
+    el.addEventListener('pointerup',end);
+    el.addEventListener('pointercancel',end);
+  }
+
+  var drawing=false, last=null;
+  function pt(e){ var r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+  canvas.addEventListener('pointerdown',function(e){
+    if(mode!=='draw') return;
+    drawing=true; last=pt(e);
+    try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+    ctx.fillStyle=color;
+    ctx.beginPath(); ctx.arc(last.x,last.y,penW/2,0,6.2832); ctx.fill();
+  });
+  canvas.addEventListener('pointermove',function(e){
+    if(!drawing) return;
+    var p=pt(e);
+    ctx.strokeStyle=color; ctx.lineWidth=penW;
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke();
+    last=p;
+  });
+  function stopDraw(){
+    if(!drawing) return;
+    drawing=false;
+    try{ page(cur).ink=canvas.toDataURL('image/png'); save(); }catch(err){}
+  }
+  canvas.addEventListener('pointerup',stopDraw);
+  canvas.addEventListener('pointercancel',stopDraw);
+
+  function setMode(m){
+    mode=m;
+    document.body.setAttribute('data-mode',m);
+    var tabs=document.querySelectorAll('.tabs button');
+    for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle('on', tabs[i].dataset.mode===m);
+    canvas.classList.toggle('drawing', m==='draw');
+    text.style.pointerEvents = (m==='write')?'auto':'none';
+    if(m!=='write') text.blur();
+    $('#penPanel').classList.toggle('on', m==='draw');
+    $('#stickerPanel').classList.toggle('on', m==='sticker');
+  }
+
+  function load(){
+    var p=page(cur);
+    text.value=p.text||'';
+    renderDate(); renderMood(); renderStickers();
+    requestAnimationFrame(fitCanvas);
+  }
+
+  var tmr=null;
+  text.addEventListener('input',function(){
+    page(cur).text=text.value;
+    if(tmr) clearTimeout(tmr);
+    tmr=setTimeout(save,250);
+  });
+
+  document.querySelector('.tabs').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return; setMode(b.dataset.mode);
+  });
+
+  $('#moods').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    var p=page(cur);
+    p.mood = (p.mood===b.dataset.m)?'':b.dataset.m;
+    save(); renderMood();
+  });
+
+  $('#palette').addEventListener('click',function(e){
+    var s=e.target.closest('.swatch'); if(!s) return;
+    color=s.dataset.c;
+    var all=document.querySelectorAll('.swatch');
+    for(var i=0;i<all.length;i++) all[i].classList.toggle('on', all[i]===s);
+  });
+
+  document.querySelectorAll('.size').forEach(function(b){
+    b.addEventListener('click',function(){
+      penW=parseInt(b.dataset.w,10);
+      document.querySelectorAll('.size').forEach(function(x){ x.classList.toggle('on', x===b); });
+    });
+  });
+
+  $('#clearInk').addEventListener('click',function(){
+    if(!confirm('把这一页画的东西全部擦掉？')) return;
+    var r=sheet.getBoundingClientRect();
+    ctx.clearRect(0,0,r.width,r.height);
+    page(cur).ink=''; save();
+  });
+
+  $('#picks').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    page(cur).stickers.push({c:b.textContent, x:50, y:50});
+    save(); renderStickers();
+  });
+
+  prevBtn.addEventListener('click',function(){
+    var d=new Date(cur+'T00:00:00'); d.setDate(d.getDate()-1);
+    cur=iso(d); load();
+  });
+  nextBtn.addEventListener('click',function(){
+    if(cur>=today) return;
+    var d=new Date(cur+'T00:00:00'); d.setDate(d.getDate()+1);
+    cur=iso(d); load();
+  });
+
+  window.addEventListener('resize',function(){ fitCanvas(); });
+  window.addEventListener('orientationchange',function(){ setTimeout(fitCanvas,220); });
+
+  load();
+})();
+</script>
+</body>
+</html>
